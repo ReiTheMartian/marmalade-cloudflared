@@ -28,10 +28,12 @@ if command -v tailscaled >/dev/null 2>&1; then
     tailscale up --authkey="$TS_AUTHKEY" $TS_ARGS \
       || echo "[entrypoint] 'tailscale up --authkey' failed"
   else
-    # Interactive auth: prints a login URL to the logs. Backgrounded so it
-    # never blocks cloudflared. Re-run to get a fresh URL: tailscale up
-    echo "[entrypoint] no TS_AUTHKEY set — requesting an interactive login URL"
-    ( tailscale up $TS_ARGS 2>&1 | sed 's/^/[tailscale] /' ) &
+    # Interactive auth: tailscale prints a login URL. Write it straight to the
+    # container log (no pipe — a pipe through sed/grep block-buffers and the URL
+    # never flushes while 'tailscale up' stays open waiting for auth).
+    # Backgrounded so it never blocks cloudflared. Re-run to get a fresh URL.
+    echo "[entrypoint] no TS_AUTHKEY set — tailscale login URL follows:"
+    tailscale up $TS_ARGS &
   fi
 fi
 
